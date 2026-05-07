@@ -29,8 +29,10 @@ export LOGLEVEL="${LOGLEVEL:-WARNING}"
 
 MODEL_NAME_OR_PATH="PKU-Alignment/alpaca-7b-reproduced"
 OUTPUT_DIR="${ROOT_DIR}/output/rm"
+TRAIN_DATASETS=("PKU-Alignment/PKU-SafeRLHF-30K/train")
+EVAL_DATASETS=("PKU-Alignment/PKU-SafeRLHF-30K/test")
 unset HOSTFILE
-ZERO_STAGE=3
+ZERO_STAGE=2
 OFFLOAD="none"
 while [[ "$#" -gt 0 ]]; do
 	arg="$1"
@@ -49,6 +51,26 @@ while [[ "$#" -gt 0 ]]; do
 			;;
 		--output_dir=*)
 			OUTPUT_DIR="${arg#*=}"
+			;;
+		--train_datasets)
+			TRAIN_DATASETS=()
+			while [[ "$#" -gt 0 && "$1" != --* ]]; do
+				TRAIN_DATASETS+=("$1")
+				shift
+			done
+			;;
+		--train_datasets=*)
+			TRAIN_DATASETS=("${arg#*=}")
+			;;
+		--eval_datasets)
+			EVAL_DATASETS=()
+			while [[ "$#" -gt 0 && "$1" != --* ]]; do
+				EVAL_DATASETS+=("$1")
+				shift
+			done
+			;;
+		--eval_datasets=*)
+			EVAL_DATASETS=("${arg#*=}")
 			;;
 		--hostfile)
 			HOSTFILE="$1"
@@ -109,8 +131,8 @@ exec 1> >(tee "${OUTPUT_DIR}/stdout.log" >&1) 2> >(tee "${OUTPUT_DIR}/stderr.log
 
 deepspeed "${DEEPSPEED_ARGS[@]}" \
 	--module safe_rlhf.values.reward \
-	--train_datasets PKU-SafeRLHF/train \
-	--eval_datasets PKU-SafeRLHF/test \
+	--train_datasets "${TRAIN_DATASETS[@]}" \
+	--eval_datasets "${EVAL_DATASETS[@]}" \
 	--model_name_or_path "${MODEL_NAME_OR_PATH}" \
 	--max_length 512 \
 	--trust_remote_code True \
